@@ -47,6 +47,6 @@ sudo docker run -it --rm -p 8080:80 -v ${MIRROR_DIR}:/www:ro -v `pwd`/config:/et
 ```
 最后，回到刚才装在内存中的 CoreOS server，用以下命令安装系统到硬盘。这里通过 -c 指定的 cloud-config 文件是将 coreos-ipxe-server 中的配置文件下载到了本地，因为我发现 -c 参数不支持 http 的 URL。-b 指定的是系统下载镜像地址。
 ```bash
-sudo coreos-install -d /dev/sda -c 00\:25\:90\:c0\:f7\:86.yml -b http://10.10.10.1:8080
+sudo coreos-install -d /dev/sda -c '00:25:90:c0:f7:86.yml' -b http://10.10.10.1:8080
 ```
 
