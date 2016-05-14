@@ -2,11 +2,23 @@
 
 # 使用 iPXE 引导 CoreOS
 
-* 我实验的子网内没有 DHCP 服务，所以我自建了 DHCP 和 TFTP 服务，根据 [iPXE 的文档](http://ipxe.org/howto/chainloading) 通过 PXE 来 chainload iPXE。
+* 我实验的子网内没有 DHCP 服务，所以我自建了 DHCP 和 TFTP 服务，根据 [iPXE 的文档](http://ipxe.org/howto/chainloading) 通过 PXE 来 chainload iPXE。我的 /etc/dhcp/dhcpd.conf 中相关的设置是这样的：
+```
+option domain-name-servers 10.10.10.1;
+if exists user-class and option user-class = "iPXE" {
+    filename "http://10.10.10.1:4777/?profile=${net0/mac}";
+} else {
+    filename "undionly.kpxe";
+}
+next-server 10.10.10.1;
+```
+其中的 http URL 用于访问下边介绍的工具 coreos-ipxe-server 提供的 iPXE 配置文件。
+
 * 使用了 [coreos-ipxe-server](https://github.com/kelseyhightower/coreos-ipxe-server) 这个工具来引导安装 CoreOS 到内存。这个工具的方便在于：
   * 自动生成 iPXE boot script，通过自带的 HTTP 服务提供。
   * 可以为每台主机分别提供不同的 cloud-config 文件，每个文件可以以主机的 MAC 地址为文件名，引导时通过 iPXE 提供的主机 MAC 地址自动选择，从而可以批量安装系统，并且为每台主机应用不同的配置。
   * 一个 tip：iPXE 的变量 ${net0/mac} 替换为网卡 MAC 时是小写，如果 coreos-ipxe-server 的配置文件名用的是大写（如[这个视频](https://www.youtube.com/watch?v=dRG2ajUaBqs)中演示的），会找不到文件。
+  
 
 # 将 CoreOS 安装到硬盘
 
