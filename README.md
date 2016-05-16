@@ -37,9 +37,10 @@ MIRROR_DIR=/work/local/lipeng/coreos-mirror
 mkdir -p ${MIRROR_DIR}/${VER}
 (
   cd ${MIRROR_DIR}/${VER}
-  [ -f ${VER}/coreos_production_image.bin.bz2 ] || \ 
-    wget http://${CHANNEL}.release.core-os.net/amd64-usr/${VER}/coreos_production_image.bin.bz2 && \ 
+  if [[ ! -f ${VER}/coreos_production_image.bin.bz2 ]]; then
+    wget http://${CHANNEL}.release.core-os.net/amd64-usr/${VER}/coreos_production_image.bin.bz2
     wget http://${CHANNEL}.release.core-os.net/amd64-usr/${VER}/coreos_production_image.bin.bz2.sig
+  fi
 )
 
 # 启动一个 nginx docker 来提供 image 下载，启动前先设置好 `pwd`/config/nginx.conf，并创建目录 logs 用于记录 nginx 的日志（可能没必要）。
