@@ -1,7 +1,7 @@
 # 在bare-metal上安装k8s的初始化工作
 
 ## 1. 任务描述
-在3台只安装了coreos的bare-metal上安装tkubernetes。这3台机器的IP地址如下：
+在3台只安装了coreos的bare-metal上安装kubernetes。这3台机器的IP地址如下：
 - 10.10.10.191
 - 10.10.10.192
 - 10.10.10.193
