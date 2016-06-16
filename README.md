@@ -51,3 +51,10 @@ sudo docker run -it --rm -p 8080:80 -v ${MIRROR_DIR}:/www:ro -v `pwd`/config:/et
 sudo coreos-install -d /dev/sda -c '00:25:90:c0:f7:86.yml' -b http://10.10.10.1:8080
 ```
 
+* coreos-install 是一个位于 ```/usr/bin/``` 的 bash script，在上面的调用中，它主要做了如下三件事：
+ * 从 -b 指定的 URL 下载 .bz2 压缩的 img 文件，img 的 release channel 和 version 都与当前运行的系统相同。
+ * 解压上述文件，将内容重定向到 -d 参数指定的 block device。这个过程会在 device 里产生 9 个区分。
+ * 将 -c 指定的 cloud-config 文件拷贝为安装好的系统的 /var/lib/coreos-install/user_data 文件。
+
+## 关于可以用于安装的 device 类型
+coreos-install 里通过 lsblk 来检查 -d 指定的 device 的类型，并且仅接受 disk, loop, lvm 三者之一。而根据我的安装经验，lvm logcial volume 无法用于安装，原因是上述 coreos-install 做的第二件事在此 device 上写了一个分区表，然后通过 ```blockdev --rereadpt <device>``` 调用通知系统重新读入分区表，但是 ```blockdev``` 并不支持 lvm logical volume 内分区表的读取。同样的，我在网上也看到有人使用 loopback device 安装时遇到一样的问题。
