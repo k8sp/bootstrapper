@@ -1,0 +1,13 @@
+digraph {
+rankdir = LR
+"power on" -> "BIOS chip"
+"BIOS chip" -> "boot loader on disk" [label = "boot from disk" ]
+"boot loader on disk" -> "kernel on disk" -> "init/upstart/systemd"
+"BIOS chip" -> "boot loader on LiveCD" [label = "LiveCD"]
+"boot loader on LiveCD" -> "kernel on LiveCD" -> "init/upstart/systemd"
+"BIOS chip" -> "boot loader from network" [label = "PXE/iPXE"]
+"boot loader from network" -> "kernel from network" -> "init/upstart/systemd"
+"BIOS chip" -> "boot loader on DVDROM" [label = "install from DVDROM"]
+"boot loader on DVDROM" -> "kernel on DVDROM"
+"kernel on DVDROM" -> "DVD installation program"
+}
