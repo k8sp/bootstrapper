@@ -20,11 +20,17 @@
 
 ![boot](images/boot.png)
 
+下面是 PXE 引导的简单过程，详细介绍可以参考 [这一篇](https://docs.oracle.com/cd/E24628_01/em.121/e27046/appdx_pxeboot.htm#EMLCM12198) 和 [这一篇](http://www.syslinux.org/wiki/index.php?title=PXELINUX) 文档。
+
+1. 机器启动的时候会广播一个 DHCP 请求，申请 IP 地址。我们应该配置 DHCP 服务器让它在response 里告知存放 boot loader 的 TFTP server 的 IP 地址以及 boot loader 在TFTP里的位置。
+2. 网卡据此获得boot loader程序，并且执行之，由此启动操作系统。
+
+
 ## 配置 PXE server
 
-以下操作在一台运行 CentOS 7.1 的服务器上操作，这台服务器的 IP 地址是 `10.10.10.1`，它将用于提供 DHCP 服务，TFTP 服务，以及提供 cloud-config 文件。安装 TFTP 服务是因为 PXE 仅支持 TFTP 协议的文件传输。
+以下操作在一台运行 CentOS 7.1 的服务器上操作，这台服务器的 IP 地址是 `10.10.10.1`，它将用于提供 DHCP 服务，TFTP 服务，以及提供 cloud-config 文件。示例中使用了 `stable` channel 版本为 `1010.5.0` 的 CoreOS。
 
-### 安装 DHCP server, TFTP server, syslinux 及下载 CoreOS 的 PXE kernel 和 initrd
+### 安装软件
 
 ```bash
 #!/bin/bash
@@ -56,17 +62,14 @@ filename "pxelinux.0"
 
 ### 配置 pxelinux
 
-编辑 `/var/lib/tftpboot/pxelinux.cfg/01-00-25-90-c0-f7-86`，文件名 01-00-25-90-c0-f7-86 由 01 (Ethernet 的 ARP type code) 和 MAC 地址组成，字母要小写，用 dash separators 隔开。当 MAC 地址为 `00:25:90:c0:f7:86` 的机器通过运行于 10.10.10.1 的 DHCP 服务器获取到 IP 地址后，它会经由 PXE  来完成引导，它读取的配置文件就是 `/var/lib/tftpboot/pxelinux.cfg/01-00-25-90-c0-f7-86`。因此，我们可以在 `/var/lib/tftpboot/pxelinux.cfg/` 下为每一台要安装 CoreOS 的服务器放置一个不同的配置文件。如果希望使用统一的配置文件，则将文件名设为 `default` 即可。
+编辑 `/var/lib/tftpboot/pxelinux.cfg/01-00-25-90-c0-f7-86`，文件名 01-00-25-90-c0-f7-86 由 01 (Ethernet 的 ARP type code) 和 MAC 地址组成，字母要小写，用 dash separators 隔开。当网卡 MAC 地址为 `00:25:90:c0:f7:86` 的机器通过运行于 10.10.10.1 的 DHCP 服务器获取到 IP 地址后，它会经由 PXE  来完成引导，它读取的配置文件就是 `/var/lib/tftpboot/pxelinux.cfg/01-00-25-90-c0-f7-86`。因此，我们可以在 `/var/lib/tftpboot/pxelinux.cfg/` 下为每一台要安装 CoreOS 的服务器放置一个不同的配置文件，文件名基于网卡的 MAC 地址。在 `/var/lib/tftpboot/pxelinux.cfg/` 还可以放置一个文件名为 `default` 的默认配置文件。
+
+下面是 `/var/lib/tftpboot/pxelinux.cfg/01-00-25-90-c0-f7-86` 的内容
 
 ```bash
 default coreos
-prompt 1
-timeout 15
-
-display boot.msg
 
 label coreos
-  menu default
   kernel coreos_production_pxe.vmlinuz
   append initrd=coreos_production_pxe_image.cpio.gz cloud-config-url=http://10.10.10.1:8080/cloud-configs/00:25:90:c0:f7:86.yml
 ```
