@@ -27,11 +27,14 @@ I am trying to make it the PXE server.
 ### Network Topology
 
 I have a LinkSys router.  I plug its upstream cable to the Ethernet
-slot on the wall of the office.  I plug three downstream cables to
+slot on the wall of the office.  As shown in the following figure, I
+plugged three downstream cables to
 
 1. a Mac Mini running Ubuntu Linux, 
 1. the Raspberry Pi, and
 1. the MacBook Pro on which I work.
+
+<img width=600 src="cluster.jpg" />
 
 After booting all these computers, they got IP addresses from the router:
 
