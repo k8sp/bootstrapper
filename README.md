@@ -53,8 +53,8 @@ gpg --verify coreos_production_pxe_image.cpio.gz.sig
 
 编辑 `/etc/dhcp/dhcpd.conf`，增加以下两行：
 ```bash
-next-server 10.10.10.1
-filename "pxelinux.0"
+next-server 10.10.10.1;
+filename "pxelinux.0";
 ```
 上述两行的作用是，当有一台机器通过本机的 DHCP 获取得 IP 后，它会以 `next-server`上的 `/var/lib/tftpboot/$filename` 作为 PXE 的 bootloader。
 
