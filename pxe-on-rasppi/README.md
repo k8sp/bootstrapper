@@ -61,7 +61,7 @@ A PXE server is a DHCP server that returns not only the IP address,
 but also URL of OS images used to boot the target computer.
 
 I got my idea about DHCP server on Ubuntu from 
-[this tutorial](https://help.ubuntu.com/community/isc-dhcp-server).
+[this tutorial](http://www.noveldevices.co.uk/rp-dhcp-server):
 
 ```
 sudo apt-get install isc-dhcp-server
@@ -73,11 +73,12 @@ from where to download the OS images.  To do this, I edit the
 `192.168.2.10`.
 
 ```
-# iface eth0 inet manual
+auto eth0
 iface eth0 inet static
 address 192.168.2.10
 netmask 255.255.255.0
 gateway 192.168.2.1
+dns-nameservers 8.8.4.4 8.8.8.8
 ```
 
 Then I rewrote `/etc/dhcp/dhcpd.conf` to make the DHCP server
@@ -105,6 +106,8 @@ Now we can restart the server to make the configuration happen:
 sudo service isc-dhcp-server restart
 ```
 
+#### Test DHCP Service
+
 After doing this, I disabled the DHCP service on the router via the
 Web UI.  Then I restarted the Mac Mini.  After it reboots, it got new
 IP address `192.168.2.13`.  It seems that the Raspberry Pi DHCP server
@@ -117,6 +120,26 @@ www.google.com` now fails:
 yi@pxe:~$ curl www.google.com
 curl: (6) Could not resolve host: www.google.com
 ```
+
+This can be fixed by editing `/etc/resolv.conf` and add a line
+`nameserver 8.8.8.8`.  For CoreOS target computers, we can make the
+cloud-config file adding this line every time a target computer
+starts.
+
+```
+write_files:
+  - path: "/etc/resolv.conf"
+    permissions: "0644"
+    owner: "root"
+    content: |
+       nameserver 8.8.8.8
+```	
+
+Then I restarted the Raspberry Pi.  It boots into a status that the
+DHCP server runs OK and it can resovle and access www.google.com.
+
+Then I restarted the Mac Mini again.  It got `192.168.2.15`, an IP
+address in the specified range.
 
 
 ### TFTP Server
