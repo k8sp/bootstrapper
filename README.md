@@ -26,11 +26,13 @@
 2. 网卡据此获得boot loader程序，并且执行之，由此启动操作系统。
 
 
-## 配置 PXE server
+## 手动安装 CoreOS 到硬盘
+
+### 配置 PXE server
 
 以下操作在一台运行 CentOS 7.1 的服务器上操作，这台服务器的 IP 地址是 `10.10.10.1`，它将用于提供 DHCP 服务，TFTP 服务，以及提供 cloud-config 文件。示例中使用了 `stable` channel 版本为 `1010.5.0` 的 CoreOS。
 
-### 安装软件
+#### 安装软件
 
 ```bash
 #!/bin/bash
@@ -49,7 +51,7 @@ wget https://${CHANNEL}.release.core-os.net/amd64-usr/${VERSION}/coreos_producti
 gpg --verify coreos_production_pxe.vmlinuz.sig
 gpg --verify coreos_production_pxe_image.cpio.gz.sig
 ```
-### 配置 DHCP
+#### 配置 DHCP
 
 编辑 `/etc/dhcp/dhcpd.conf`，增加以下两行：
 ```bash
@@ -60,7 +62,7 @@ filename "pxelinux.0";
 
 `/etc/dhcp/dhcpd.conf` 中还应该包括与 IP 地址分配相关的配置，请自行 Google。
 
-### 配置 pxelinux
+#### 配置 pxelinux
 
 编辑 `/var/lib/tftpboot/pxelinux.cfg/01-00-25-90-c0-f7-86`，文件名 01-00-25-90-c0-f7-86 由 01 (Ethernet 的 ARP type code) 和 MAC 地址组成，字母要小写，用 dash separators 隔开。当网卡 MAC 地址为 `00:25:90:c0:f7:86` 的机器通过运行于 10.10.10.1 的 DHCP 服务器获取到 IP 地址后，它会经由 PXE  来完成引导，它读取的配置文件就是 `/var/lib/tftpboot/pxelinux.cfg/01-00-25-90-c0-f7-86`。因此，我们可以在 `/var/lib/tftpboot/pxelinux.cfg/` 下为每一台要安装 CoreOS 的服务器放置一个不同的配置文件，文件名基于网卡的 MAC 地址。在 `/var/lib/tftpboot/pxelinux.cfg/` 还可以放置一个文件名为 `default` 的默认配置文件。
 
@@ -74,12 +76,12 @@ label coreos
   append initrd=coreos_production_pxe_image.cpio.gz cloud-config-url=http://10.10.10.1:8080/cloud-configs/00:25:90:c0:f7:86.yml
 ```
 
-## 使用 PXE 引导 CoreOS
+### 使用 PXE 引导 CoreOS
 
 在主板的 BIOS chip 支持通过 PXE 协议启动的服务器上，修改 BIOS 设置，将通过网络引导放到其他引导方式前边，然后重启，后续后自动完成安装。
 
 
-# 将 CoreOS 安装到硬盘
+### 将 CoreOS 安装到硬盘
 
 通过上述步骤启动的 CoreOS 是安全运行内存中的，包括它的 root 也是 mount 到一个存在于内存中的 tmpfs 中。如果希望摆脱对 PXE server 的依赖，同时能将后续的一些数据持久化，就要把 CoreOS 系统安装到硬盘上。
 
@@ -99,6 +101,40 @@ sudo coreos-install -d /dev/sda -c '00:25:90:c0:f7:86.yml' -b http://10.10.10.1:
   * 解压上述文件，将内容重定向到 -d 参数指定的 block device。这个过程会在 device 里产生 [9 个区分](https://coreos.com/os/docs/latest/sdk-disk-partitions.html)。
   * 将 -c 指定的 cloud-config 文件拷贝为安装好的系统的 /var/lib/coreos-install/user_data 文件。
 
-## 关于可以用于安装的 device 类型
+### 关于可以用于安装的 device 类型
 
 coreos-install 里通过 lsblk 来检查 -d 指定的 device 的类型，并且仅接受 disk, loop, lvm 三者之一。而根据我的安装经验，lvm logcial volume 无法用于安装，原因是上述 coreos-install 做的第二件事在此 device 上写了一个分区表，然后通过 ```blockdev --rereadpt <device>``` 调用通知系统重新读入分区表，但是 ```blockdev``` 并不支持 lvm logical volume 内分区表的读取。同样的，我在网上也看到有人使用 loopback device 安装时遇到一样的问题。
+
+
+
+## 自动安装 CoreOS 到硬盘
+
+上个 section 描述了手动安装 CoreOS 到硬盘的两个阶段，即首先由 PXE 引导启动一个所有挂载点都在内存中的系统，然后再手动安装系统到硬盘。在实际应用中，我们并不关心第一个步骤中启动的系统；而且由于我们要装很多台机器，一台一台手动安装很浪费时间，所以需要将上述步骤变成一个自动化的操作。这个 section 描述这个方法。
+
+自动安装的过程主要利用了 `cloud-config` 文件本身既可以是一个 yaml 格式的配置文件，也可以是一个 shell script 文件这个特性，我们将安装系统到硬盘的操作写到一个 script 文件中，并以此文件作为  PXE 引导启动系统时使用 cloud-config 文件。系统启动后，会自动执行这个 script 文件，完成安装。
+
+所以，在上个 section 描述的基础上，自动安装需要做如下修改：
+
+* 配置 pxelinux：不再为每台机器单独提供一个配置文件，而是所有机器共享一个配置文件 `/var/lib/tftpboot/pxelinux.cfg/default`， 下面是它的内容：
+
+  ```bash
+  default coreos
+
+  label coreos
+    kernel coreos_production_pxe.vmlinuz
+    append initrd=coreos_production_pxe_image.cpio.gz cloud-config-url=http://10.10.10.1:8080/cloud-configs/install.sh
+  ```
+
+* 配置用于 PXE 引导系统的 cloud-config 文件，即上面的配置文件中的 `http://10.10.10.1:8080/cloud-configs/install.sh`，它的内容如下：
+
+  ```bash
+  #!/bin/sh
+
+  mac_addr=`ifconfig | grep -A2 'broadcast' | grep -o '..:..:..:..:..:..'`
+  wget http://10.10.10.1:8080/cloud-configs/${mac_addr}.yml
+  sudo coreos-install -d /dev/sda -c ${mac_addr}.yml -b http://10.10.10.1:8080
+  sudo reboot
+  ```
+
+
+完成以上配置，从 PXE 引导 CoreOS 后，便可等待，直至系统被安装到硬盘。
