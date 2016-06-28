@@ -1,12 +1,37 @@
 # PXE in the Office
 
-I am trying to setup and run a PXE server, which can boot and
-auto-install CoreOS on other machines connected to a home-use router.
+This document describe the procedure to setup a Raspberry Pi a PXE
+server that can boot and auto-install CoreOS on target computers
+connected to the same router.  The described procedure follows
+[Li Peng's tutorial](https://github.com/k8sp/bare-metal-coreos).
+Minor differences include that we use a 32-bit Raspberry Pi with
+ARMv7l CPU and Raspbian Linux 8.
 
-I happen to have a 32-bit Raspberry Pi with ARMv7l CPU and Raspbian
-Linux 8.  I try to make it the PXE server.
 
-## Network Topology
+## Table of Contents
+
+   * [The Cluster](#the-cluster)
+   * [DHCP Server](#dhcp-server)
+     * [DHCP Server's Static IP](#dhcp-servers-static-ip)
+     * [DHCP Configuration](#dhcp-configuration)
+     * [Switch DHCP Service](#switch-dhcp-service)
+   * [TFTP Server](#tftp-server)
+     * [Deploy PXELINUX](#deploy-pxelinux)
+     * [Deploy CoreOS Images](#deploy-coreos-images)
+   * [Boot CoreOS](#boot-coreos)
+     * [Configure PXELINUX](#configure-pxelinux)
+     * [Test PXE Booting](#test-pxe-booting)
+   * [Install CoreOS](#install-coreos)
+     * [HTTP Server](#http-server)
+     * [CoreOS Installation Images](#coreos-installation-images)
+     * [install-coreos.sh](#install-coreossh)
+     * [cloud-config Files](#cloud-config-files)
+   * [Pitfalls](#pitfalls)
+     * [DHCP Configuration Error Checking](#dhcp-configuration-error-checking)
+     * [DNS Server Configuration](#dns-server-configuration)
+     * [CoreOS Suppoted Deivce Types](#coreos-suppoted-deivce-types)
+	  
+## The Cluster
 
 I have a LinkSys router.  I plug its upstream cable to the Ethernet
 slot on the wall of the office.  As shown in the following figure, I
@@ -43,7 +68,7 @@ On all these computers, I did `curl www.gooogle.com` and verified that
 I can access the Internet.
 
 
-## Install the DHCP Server
+## DHCP Server
 
 A PXE server is a DHCP server that returns not only the IP address,
 but also URL of boot images that will be used to boot the target
@@ -183,6 +208,12 @@ gpg --verify coreos_production_pxe.vmlinuz.sig
 gpg --verify coreos_production_pxe_image.cpio.gz.sig
 ```
 
+You might wonder how come the `CHANNEL` and the `VERSION` variables,
+which tells that the most recent stable channel of CoreOS releases the
+1010.5.0 version.  We can always get the up-to-date version of the
+stable channel by accessing
+https://stable.release.core-os.net/amd64-usr/current/version.txt.
+
 ## Boot CoreOS
 
 ### Configure PXELINUX
@@ -211,7 +242,7 @@ default coreos
 
 label coreos
   kernel coreos_production_pxe.vmlinuz
-  append initrd=coreos_production_pxe_image.cpio.gz cloud-config-url=http://192.168.1.105:8080/cloud-config/install-coreos
+  append initrd=coreos_production_pxe_image.cpio.gz cloud-config-url=http://192.168.1.105:8080/install-coreos.sh
 ```
 
 This configuration file tells `pxelinux.0` to download CoreOS images
@@ -219,6 +250,11 @@ This configuration file tells `pxelinux.0` to download CoreOS images
 `coreos_production_pxe_image.cpio.gz` form its current working
 directory.  Then `pxelinux.0` will boot the system using the CoreOS
 images.
+
+Please be aware that the URL
+`http://192.168.1.105:8080/install-coreos.sh` in above
+cloud-config file doesn't exist at the moment.  We will talk about
+this later.
 
 ### Test PXE Booting
 
@@ -230,20 +266,114 @@ follows:
 <img src="pxe-boot.jpg" width=400 />
 
 
+## Install CoreOS
 
-### Cloud-Config and HTTP Server
+Above steps allows us to boot a CoreOS on the Thinkpad from Raspberry
+Pi PXE server.  This CoreOS system mounts a in-memory `tmpfs`
+filesystem at the root mount point `/`.  However, we usually want
+CoreOS installed on to local disks, so we don't rely on the PXE server
+everytime we boot a target computer.
 
-Above pxelinux configuration file requires the cloud-config file at
-`http://192.168.2.10:8080/cloud-config/install-coreos`.  To make
-192.168.2.10, the Raspberry Pi PXE server to serve that, we install
-Nginx:
+To do so, we can make use of the cloud-config mechanism of CoreOS.
+Everytime CoreOS boots, it executes a cloud-config file.  This
+cloud-config file could be a YAML file, which will be interpreted and
+translated to some system configuration files, or, more flexiblly, a
+Shell script, which is executed directly.  In above steps, we let the
+PXE-booted in-memory CoreOS executes
+`http://192.168.1.105:8080/install-coreos.sh` after
+booting.  We can draft this script to call `coreos-install`, a
+standard Shell script distributed with CoreOS, to install CoreOS onto
+the local disk.
+
+`coreos-install` does three things:
+
+1. Download the CoreOS installation image and the corresponding
+   signature file from a HTTP server specified with the `-b` command
+   line parameter.  We will make the Raspberry Pi the HTTP server.
+
+1. Install the image to a device specified with the `-d` command line
+   flag.  The specified device need to be a *disk*-typed device.  For
+   more information, please refer to
+   [this pitfall](#coreos-suppoted-deivce-types).
+
+1. Copy the cloud-config file specified with the `-c` command line
+   parameter to be `/var/lib/coreos-install/user_data`.  Then,
+   everytime the newly installed CoreOS system boots from disk, it
+   will execute this cloud-config file.  We can use this cloud-config
+   file to install and configure systems like etcd and Kubernetes.
+   
+
+### HTTP Server
+
+To host `http://192.168.2.10:8080/install-coreos.sh` and
+the CoreOS installation image etc, we install Nginx on 192.168.2.10,
+the Raspberry Pi PXE server:
 
 ```
 sudo apt-get update
 sudo apt-get install nginx
 ```
 
+Nginx serves files in directory `/var/www/html`.  To test that the
+Nginx server is running:
 
+```bash
+cd /var/www/
+sudo chown -R pi html
+cd html
+echo World > world
+```
+
+Then access Nginx from the MacBook Pro:
+
+```bash
+curl http://192.168.2.10/world
+World
+```
+
+### CoreOS Installation Images
+
+Download the CoreOS installation images and corresponding signature files:
+
+```bash
+cd /var/www/html
+mkdir 1010.5.0
+cd 1010.5.0
+wget https://stable.release.core-os.net/amd64-usr/1010.5.0/coreos_production_image.bin.bz2
+wget https://stable.release.core-os.net/amd64-usr/1010.5.0/coreos_production_image.bin.bz2.sig
+```
+
+### `install-coreos.sh`
+
+Put the following `install-coreos.sh` file in `/var/www/html`.
+
+```bash
+#!/bin/sh
+mac_addr=`ifconfig eth0 | head -n 1 | awk '{print $NF;}'`
+wget http://192.168.2.10/cloud-configs/${mac_addr}.yml
+sudo coreos-install -d /dev/sda -c ${mac_addr}.yml -b http://192.168.2.10
+sudo reboot
+```
+
+This script gets the MAC address of the first network card `eth0`, and
+makes the YAML file with the same name as the MAC address the
+cloud-config file.  This allows us to specify the cloud-config file
+for each computer.  We need this property because some computers will
+be configured to run etcd, some others to run Kubernetes master nodes,
+and yet some others to run Kubernetes worker nodes.
+
+### cloud-config Files
+
+For our very simple case that we don't configure the Thinkpad to run
+etcd or Kubernetes, our cloud-config file,
+`/var/www/html/cloud-configs/28:d2:44:fb:19:49.yml`, is very simple --
+it just add an SSH key to the installed CoreOS.
+
+```
+#cloud-config
+ssh_authorized_keys:
+  - ssh-rsa AAAAB3N...
+```
 
 
 ## Pitfalls
@@ -338,3 +468,13 @@ For more information about configuring DHCP server on Ubuntu (or
 Raspbian), please refer to
 [this document](https://help.ubuntu.com/community/isc-dhcp-server).
 
+
+### CoreOS Suppoted Deivce Types
+
+`coreos-install` invokes `lsblk` to check the device type, and by
+documents, it accepts three device types: *disk*, *loop*, and *LVM*.
+However, only *disk* is a viable choice in practice.  This is because
+that `coreos-install` creates a partition table on the device, and
+invokes `blockdev --rereadpt <device>` to load this partition table;
+however, `blockdev` cannot read partition tables in LVM devices nor
+loop devices.
