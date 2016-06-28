@@ -92,9 +92,35 @@ wget http://10.10.10.1:8080/cloud-configs/00:25:90:c0:f7:86.yml
 sudo coreos-install -d /dev/sda -c '00:25:90:c0:f7:86.yml' -b http://10.10.10.1:8080
 ```
 
-执行  `coreos-install` 会下载 http://10.10.10.1:8080/1010.5.0/coreos_production_image.bin.bz2 和 http://10.10.10.1:8080/1010.5.0/coreos_production_image.bin.bz2.sig 两个文件，因此，10.10.10.1 的 nginx 的目录结构应该是如下图所示（这张图里包含了较旧的 899.17.0 版本的系统镜像文件，以及上文中用到的 cloud-config 文件）：
+执行  `coreos-install` 会下载 http://10.10.10.1:8080/1010.5.0/coreos_production_image.bin.bz2 和 http://10.10.10.1:8080/1010.5.0/coreos_production_image.bin.bz2.sig 两个文件，因此，10.10.10.1 的 nginx 的 data 目录结构应该是如下图所示（同一个 nginx 服务还提供 cloud-config 文件的下载）：
 
-![nginx-files](images/nginx-files.png)
+```
+.
+├── 1010.5.0
+│   ├── coreos_production_image.bin.bz2
+│   └── coreos_production_image.bin.bz2.sig
+├── cloud-configs
+│   ├── 00:25:90:c0:f6:d6.yml
+│   ├── 00:25:90:c0:f6:ee.yml
+│   ├── 00:25:90:c0:f7:62.yml
+│   ├── 00:25:90:c0:f7:68.yml
+│   ├── 00:25:90:c0:f7:7a.yml
+│   ├── 00:25:90:c0:f7:7c.yml
+│   ├── 00:25:90:c0:f7:7e.yml
+│   ├── 00:25:90:c0:f7:80.yml
+│   ├── 00:25:90:c0:f7:86.yml
+│   ├── 00:25:90:c0:f7:88.yml
+│   ├── 00:25:90:c0:f7:ac.yml
+│   ├── 00:25:90:c0:f7:c8.yml
+│   ├── 00:25:90:d0:a8:c4.yml
+│   ├── 00:e0:81:ee:82:c4.yml
+│   ├── d4:ae:52:c5:07:f9.yml
+│   ├── install.sh
+├── config
+└── logs
+    └── error.log
+    ``````
+```
 
 * coreos-install 主要做了如下三件事：
   * 从 -b 指定的 URL 下载 .bz2 压缩的 img 文件，img 的 release channel 和 version 都与当前运行的系统相同。
