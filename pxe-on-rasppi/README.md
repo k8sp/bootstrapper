@@ -142,7 +142,7 @@ I can ssh to Thinkpad using its new IP address.
 Then I restarted the Raspberry Pi.  It boots into a status that the
 DHCP server runs OK and it can resovle and access `www.google.com`.
 
-Then I restarted the Mac Mini again.  It got `192.168.2.15`, an IP
+Then I restarted the Thinkpad again.  It got `192.168.2.15`, an IP
 address in the specified range.
 
 
