@@ -183,7 +183,9 @@ gpg --verify coreos_production_pxe.vmlinuz.sig
 gpg --verify coreos_production_pxe_image.cpio.gz.sig
 ```
 
-## Configure PXELINUX to Boot CoreOS
+## Boot CoreOS
+
+### Configure PXELINUX
 
 The idea that we need pxelinux.0 is that, when a target computer
 boots, it broadcasts a request for IP address.  The DHCP server
@@ -217,6 +219,16 @@ This configuration file tells `pxelinux.0` to download CoreOS images
 `coreos_production_pxe_image.cpio.gz` form its current working
 directory.  Then `pxelinux.0` will boot the system using the CoreOS
 images.
+
+### Test PXE Booting
+
+Now, restart the Thinkpad and hold F1 to enter the BIOS setup
+interface.  Change the boot order so that Network Boot is on top of
+the list.  Then save and exit.  Now the Thinkpad should boot CoreOS as
+follows:
+
+<img src="pxe-boot.jpg" width=400 />
+
 
 
 ### Cloud-Config and HTTP Server
@@ -312,7 +324,7 @@ Then we can restart the DHCP server
 sudo service isc-dhcp-server restart
 ```
 
-and on the Thinkpad, we release the old lease and renew it:
+On the Thinkpad, we release the old lease and renew it:
 
 ```
 sudo dhclient -r
@@ -321,4 +333,8 @@ sudo dhclient
 
 Or, of couse, we can restart the Thinkpad.  Now `curl www.google.com`
 should work on the Thinkpad.
+
+For more information about configuring DHCP server on Ubuntu (or
+Raspbian), please refer to
+[this document](https://help.ubuntu.com/community/isc-dhcp-server).
 
