@@ -261,7 +261,7 @@ this later.
 
 ### Test PXE Booting
 
-Now, restart the Thinkpad and hold F1 to enter the BIOS setup
+Now, restart the Thinkpad and hold Enter to enter the BIOS setup
 interface.  Change the boot order so that Network Boot is on top of
 the list.  Then save and exit.  Now the Thinkpad should boot CoreOS as
 follows:
@@ -320,7 +320,7 @@ sudo apt-get install nginx
 Nginx serves files in directory `/var/www/html`.  To test that the
 Nginx server is running:
 
-```bash
+```
 cd /var/www/
 sudo chown -R pi html
 cd html
@@ -329,7 +329,7 @@ echo World > world
 
 Then access Nginx from the MacBook Pro:
 
-```bash
+```
 curl http://192.168.2.10/world
 World
 ```
@@ -338,7 +338,7 @@ World
 
 Download the CoreOS installation images and corresponding signature files:
 
-```bash
+```
 cd /var/www/html
 mkdir 1010.5.0
 cd 1010.5.0
@@ -350,7 +350,7 @@ wget https://stable.release.core-os.net/amd64-usr/1010.5.0/coreos_production_ima
 
 Put the following `install-coreos.sh` file in `/var/www/html`.
 
-```bash
+```
 #!/bin/sh
 mac_addr=`ifconfig eth0 | head -n 1 | awk '{print $NF;}'`
 wget http://192.168.2.10/cloud-configs/${mac_addr}.yml
@@ -377,6 +377,40 @@ it just add an SSH key to the installed CoreOS.
 ssh_authorized_keys:
   - ssh-rsa AAAAB3N...
 ```
+
+## Review and Launch
+
+After these steps, the directory structure in `/var/www/html` would
+look like:
+
+```
+pi@raspberrypi:/var/www/html $ tree
+.
+├── 1010.5.0
+│   ├── coreos_production_image.bin.bz2
+│   └── coreos_production_image.bin.bz2.sig
+├── cloud-configs
+│   └── 28:d2:44:fb:19:49.yml
+├── index.nginx-debian.html
+└── install-coreos.sh
+```
+
+and the directory structure of `/srv/tftp` should look like:
+
+```
+pi@raspberrypi:/var/www/html $ tree /srv/tftp
+/srv/tftp
+├── coreos_production_pxe_image.cpio.gz
+├── coreos_production_pxe.vmlinuz
+├── hello
+├── ldlinux.c32
+├── pxelinux.0
+└── pxelinux.cfg
+    └── default
+```
+
+Then all we need is to press the power button of the Thinkpad and
+reboot it.
 
 
 ## Pitfalls
