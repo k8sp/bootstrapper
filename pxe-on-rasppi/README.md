@@ -42,7 +42,10 @@ plugged three downstream cables to
 1. a Lenovo Thinkpad X240 running Ubuntu.
 
 The Raspberry Pi is supposed to be the PXE server.  I want it able to
-boot and auto-install CoreOS on the Thinkpad.
+boot and auto-install CoreOS on the Thinkpad.  Here is a picture
+showing the small cluster (with an undocumented Mac Mini).
+
+<img src="cluster.jpg" width=500 />
 
 After booting all these computers, they got IP addresses from the router:
 
