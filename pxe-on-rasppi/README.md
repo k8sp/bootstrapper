@@ -136,7 +136,7 @@ sudo service isc-dhcp-server restart
 
 ### Switch DHCP Service
 
-I now disabl the DHCP service on the router via its Web UI.  Then I
+I now disable the DHCP service on the router via its Web UI.  Then I
 restarted the Thinkpad.  After it reboots, it got new IP address
 `192.168.2.13`.  It seems that the Raspberry Pi DHCP server works.
 
@@ -225,7 +225,7 @@ The idea that we need pxelinux.0 is that, when a target computer
 boots, it broadcasts a request for IP address.  The DHCP server
 responses an IP address and `next-server` and `filename`.  If the
 network card and BIOS of the target computer supports PXE, it would
-download the boot image from URL `tftp://192.168.1.105/pxelinux.0` and
+download the boot image from URL `tftp://192.168.2.10/pxelinux.0` and
 keep this URL as *current working directory*.  When it runs
 `pxelinux.0`, it lets it knows the current working directory, so that
 `pxelinux.0` can load its configuration file from there.
@@ -233,11 +233,11 @@ keep this URL as *current working directory*.  When it runs
 Suppose that the MAC address of the network card on the target
 computer is `28-d2-44-fb-19-49`, then `pxelinux.0` will read
 configuration file
-`tftp://192.168.1.105/pxelinux.cfg/01-88-99-aa-bb-cc-dd`.  If that
+`tftp://192.168.2.10/pxelinux.cfg/01-88-99-aa-bb-cc-dd`.  If that
 file doesn't exists, it tries to read
-`tftp://192.168.1.105/pxelinux.cfg/default`.
+`tftp://192.168.2.10/pxelinux.cfg/default`.
 
-The content of our `/var/lib/tftpboot/pxelinux.cfg/default` is as
+The content of our `/srv/tftp/pxelinux.cfg/default` is as
 follows:
 
 ```
@@ -245,17 +245,17 @@ default coreos
 
 label coreos
   kernel coreos_production_pxe.vmlinuz
-  append initrd=coreos_production_pxe_image.cpio.gz cloud-config-url=http://192.168.1.105:8080/install-coreos.sh
+  append initrd=coreos_production_pxe_image.cpio.gz cloud-config-url=http://192.168.2.10/install-coreos.sh
 ```
 
 This configuration file tells `pxelinux.0` to download CoreOS images
 `coreos_production_pxe.vmlinuz` and
-`coreos_production_pxe_image.cpio.gz` form its current working
+`coreos_production_pxe_image.cpio.gz` from its current working
 directory.  Then `pxelinux.0` will boot the system using the CoreOS
 images.
 
 Please be aware that the URL
-`http://192.168.1.105:8080/install-coreos.sh` in above
+`http://192.168.2.10/install-coreos.sh` in above
 cloud-config file doesn't exist at the moment.  We will talk about
 this later.
 
@@ -280,10 +280,10 @@ everytime we boot a target computer.
 To do so, we can make use of the cloud-config mechanism of CoreOS.
 Everytime CoreOS boots, it executes a cloud-config file.  This
 cloud-config file could be a YAML file, which will be interpreted and
-translated to some system configuration files, or, more flexiblly, a
+translated to some system configuration files, or, more flexibly, a
 Shell script, which is executed directly.  In above steps, we let the
 PXE-booted in-memory CoreOS executes
-`http://192.168.1.105:8080/install-coreos.sh` after
+`http://192.168.2.10/install-coreos.sh` after
 booting.  We can draft this script to call `coreos-install`, a
 standard Shell script distributed with CoreOS, to install CoreOS onto
 the local disk.
@@ -352,7 +352,7 @@ Put the following `install-coreos.sh` file in `/var/www/html`.
 
 ```
 #!/bin/sh
-mac_addr=`ifconfig eth0 | head -n 1 | awk '{print $NF;}'`
+mac_addr=`ifconfig | grep -A2 'broadcast' | grep -o '..:..:..:..:..:..'`
 wget http://192.168.2.10/cloud-configs/${mac_addr}.yml
 sudo coreos-install -d /dev/sda -c ${mac_addr}.yml -b http://192.168.2.10
 sudo reboot
@@ -410,7 +410,19 @@ pi@raspberrypi:/var/www/html $ tree /srv/tftp
 ```
 
 Then all we need is to press the power button of the Thinkpad and
-reboot it.
+reboot it.  This will boot the Thinkpad from the PXE server and starts
+CoreOS installation.  After the installation, the last line `sudo
+reboot` in `/var/www/html/install-coreos.sh` will reboot the Thinkpad
+again.  This time, we need to hold Enter to get into the BIOS
+configuration UI and change the boot order to be disk first, so that
+following boots will be from the disk.
+
+In a more realistic case, we would add new computers (without OS'es
+installed on their disks) into the network, and we wouldn't change the
+default booting order -- let it just be disk first and network later.
+The first time we press the power button will boot these new computers
+via PXE server; and once the initial booting installs CoreOS onto
+local disks, all following bootings will be from local disks.
 
 
 ## Pitfalls
