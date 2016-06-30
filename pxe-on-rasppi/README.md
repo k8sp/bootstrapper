@@ -29,7 +29,7 @@ ARMv7l CPU and Raspbian Linux 8.
    * [Pitfalls](#pitfalls)
      * [DHCP Configuration Error Checking](#dhcp-configuration-error-checking)
      * [DNS Server Configuration](#dns-server-configuration)
-     * [CoreOS Suppoted Deivce Types](#coreos-suppoted-deivce-types)
+     * [CoreOS Supported Device Types](#coreos-supported-device-types)
 	  
 ## The Cluster
 
@@ -52,7 +52,7 @@ After booting all these computers, they got IP addresses from the router:
 1. MacBook Pro: 192.168.2.10
 1. Raspberry Pi: 192.168.2.11
 1. Thinkpad: 192.168.2.12
-1. SysLink router: 192.168.2.1
+1. LinkSys router: 192.168.2.1
 
 I can configure the router via a Web UI at `http://192.168.2.1`, where
 `192.168.2.1` is the static IP of the router.  This Web UI allows me
@@ -63,7 +63,7 @@ keep it as "enabled".  The default IP address allocation range is from
 On this Web UI, I can see that the subnet mask is `255.255.255.0`.
 
 I can ssh to the Thinkpad and the Raspberry Pi from the MacBook Pro.
-On both of these Linux comptuers, I confirmed that `route -n` returns
+On both of these Linux computers, I confirmed that `route -n` returns
 the gateway IP address as `192.168.2.1`, which is the router's IP
 address.
 
@@ -143,7 +143,7 @@ restarted the Thinkpad.  After it reboots, it got new IP address
 I can ssh to Thinkpad using its new IP address.
 
 Then I restarted the Raspberry Pi.  It boots into a status that the
-DHCP server runs OK and it can resovle and access `www.google.com`.
+DHCP server runs OK and it can resolve and access `www.google.com`.
 
 Then I restarted the Thinkpad again.  It got `192.168.2.15`, an IP
 address in the specified range.
@@ -166,13 +166,13 @@ cat ./hello
 Hello
 ```
 
-It is noticable that the server is listening on `192.168.2.11`, but
+It is noticeable that the server is listening on `192.168.2.11`, but
 not on `127.0.0.1` (`localhost`).
 
 
 ### Deploy PXELINUX
 
-The boot image aforementioned in DHCP configuraton file was retrieved
+The boot image aforementioned in DHCP configuration file was retrieved
 from the pxelinux package:
 
 ```
@@ -275,10 +275,10 @@ Above steps allows us to boot a CoreOS on the Thinkpad from Raspberry
 Pi PXE server.  This CoreOS system mounts a in-memory `tmpfs`
 filesystem at the root mount point `/`.  However, we usually want
 CoreOS installed on to local disks, so we don't rely on the PXE server
-everytime we boot a target computer.
+every time we boot a target computer.
 
 To do so, we can make use of the cloud-config mechanism of CoreOS.
-Everytime CoreOS boots, it executes a cloud-config file.  This
+Every time CoreOS boots, it executes a cloud-config file.  This
 cloud-config file could be a YAML file, which will be interpreted and
 translated to some system configuration files, or, more flexibly, a
 Shell script, which is executed directly.  In above steps, we let the
@@ -297,11 +297,11 @@ the local disk.
 1. Install the image to a device specified with the `-d` command line
    flag.  The specified device need to be a *disk*-typed device.  For
    more information, please refer to
-   [this pitfall](#coreos-suppoted-deivce-types).
+   [this pitfall](#coreos-supported-device-types).
 
 1. Copy the cloud-config file specified with the `-c` command line
    parameter to be `/var/lib/coreos-install/user_data`.  Then,
-   everytime the newly installed CoreOS system boots from disk, it
+   every time the newly installed CoreOS system boots from disk, it
    will execute this cloud-config file.  We can use this cloud-config
    file to install and configure systems like etcd and Kubernetes.
    
@@ -417,7 +417,7 @@ again.  This time, we need to hold Enter to get into the BIOS
 configuration UI and change the boot order to be disk first, so that
 following boots will be from the disk.
 
-In a more realistic case, we would add new computers (without OS'es
+In a more realistic case, we would add new computers (without OS's
 installed on their disks) into the network, and we wouldn't change the
 default booting order -- let it just be disk first and network later.
 The first time we press the power button will boot these new computers
@@ -510,7 +510,7 @@ sudo dhclient -r
 sudo dhclient
 ```
 
-Or, of couse, we can restart the Thinkpad.  Now `curl www.google.com`
+Or, of course, we can restart the Thinkpad.  Now `curl www.google.com`
 should work on the Thinkpad.
 
 For more information about configuring DHCP server on Ubuntu (or
@@ -518,7 +518,7 @@ Raspbian), please refer to
 [this document](https://help.ubuntu.com/community/isc-dhcp-server).
 
 
-### CoreOS Suppoted Deivce Types
+### CoreOS Supported Device Types
 
 `coreos-install` invokes `lsblk` to check the device type, and by
 documents, it accepts three device types: *disk*, *loop*, and *LVM*.
@@ -527,3 +527,6 @@ that `coreos-install` creates a partition table on the device, and
 invokes `blockdev --rereadpt <device>` to load this partition table;
 however, `blockdev` cannot read partition tables in LVM devices nor
 loop devices.
+
+<!--  LocalWords:  PXE
+ -->
