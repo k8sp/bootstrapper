@@ -1,5 +1,7 @@
 本文档记录了一种在机群里安装 CoreOS 的方法。分两步，第一步使用 PXE 引导完全存在于内存的 CoreOS，第二步将 CoreOS 安装到硬盘。
 
+[这篇文档](pxe-on-rasppi/README.md)描述了使用 Raspberry Pi 作为 PXE server 的方法。
+
 # 使用 PXE 引导并安装 CoreOS 至硬盘
 
 ## 什么是 PXE
