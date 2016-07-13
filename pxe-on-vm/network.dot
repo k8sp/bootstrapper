@@ -1,0 +1,12 @@
+graph G {
+	router [label="Linksys Router"];
+	
+	subgraph clusterH {
+		label = "MacBook Pro";
+		pxe_vm [label="PXE VM server"];
+		boot_tester [label="Boot tester VM"];
+	}
+
+	pxe_vm -- router [label="bridged\npromiscuous mode", style=dotted];
+	boot_tester -- router [label="bridged", style=dotted];
+}
