@@ -4,7 +4,7 @@ I want to be able to test the auto-installation of Kubernetes cluster
 on a VM cluster.  To do this, I need to set up a PXE server in this VM
 cluster and use it to boot other VMs.
 
-## VM HDCP Server
+## VM DHCP Server
 
 To test that if a VM could be a DHCP server, I created two VMs --
 [pxe-vm](./pxe-vm) and [boot-tester-vm](./boot-tester-vm) on my
